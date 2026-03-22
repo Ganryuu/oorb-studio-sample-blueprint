@@ -1,0 +1,23 @@
+# Simulation parameters — used by sim.launch.py
+# These values are optimized for MuJoCo simulation.
+
+mujoco_sim_node:
+  ros__parameters:
+    model_path: "/workspace/sim/models/mjcf/robot_arm.xml"
+    use_sim_time: true
+    publish_rate: 50.0          # Hz — joint state publishing rate
+    controller_kp: 10.0         # Proportional gain for position control
+    controller_kd: 1.0          # Derivative gain (damping)
+    joint_names:
+      - joint_base
+      - joint_shoulder
+      - joint_elbow
+      - joint_wrist
+
+robot_state_publisher:
+  ros__parameters:
+    use_sim_time: true
+
+rosbridge_websocket:
+  ros__parameters:
+    port: 9090

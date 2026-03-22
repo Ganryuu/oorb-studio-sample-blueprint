@@ -1,25 +1,78 @@
-# .oorb/validate.yaml — what "working" means for this Blueprint
+# .oorb/validate.yaml — Blueprint Health Checks v1
+#
+# Defines what "working" means for this Blueprint.
+# Studio runs these after import. CI runs them on every push.
+# Each check has a command, and either expect (exit code) or expect_contains (output).
+
 oorb_validate: "1.0"
 
 checks:
-  - name: "Packages build"
-    command: "cd /workspace/ros2_ws && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install"
+  # ─── Build ───
+  - name: "All packages build"
+    command: >
+      source /opt/ros/jazzy/setup.bash &&
+      cd /workspace/ros2_ws &&
+      colcon build --symlink-install
     expect: "exit_code_0"
 
-  - name: "Robot arm node runs"
-    command: |
+  - name: "Colcon tests pass"
+    command: >
+      source /opt/ros/jazzy/setup.bash &&
+      cd /workspace/ros2_ws &&
+      source install/setup.bash &&
+      colcon test &&
+      colcon test-result --verbose
+    expect: "exit_code_0"
+
+  # ─── URDF ───
+  - name: "URDF parses correctly"
+    command: >
+      source /opt/ros/jazzy/setup.bash &&
+      xacro /workspace/ros2_ws/src/my_bot_description/urdf/robot_arm.urdf.xacro > /tmp/robot.urdf &&
+      python3 -c "
+      import xml.etree.ElementTree as ET;
+      tree = ET.parse('/tmp/robot.urdf');
+      joints = [j for j in tree.getroot().findall('.//joint') if j.get('type') != 'fixed'];
+      print(f'{len(joints)} revolute joints');
+      assert len(joints) == 4, f'Expected 4 joints, got {len(joints)}'
+      "
+    expect: "exit_code_0"
+
+  # ─── Simulation ───
+  - name: "MuJoCo model loads"
+    command: >
+      python3 -c "
+      import mujoco;
+      m = mujoco.MjModel.from_xml_path('/workspace/sim/models/mjcf/robot_arm.xml');
+      d = mujoco.MjData(m);
+      print(f'{m.nq} DOFs, {m.nu} actuators');
+      assert m.nu == 4, f'Expected 4 actuators, got {m.nu}';
+      mujoco.mj_step(m, d);
+      print('Physics step OK')
+      "
+    expect: "exit_code_0"
+
+  # ─── ROS nodes ───
+  - name: "Robot arm node publishes /joint_states"
+    command: >
       source /opt/ros/jazzy/setup.bash &&
       source /workspace/ros2_ws/install/setup.bash &&
-      timeout 5 ros2 run my_bot_py robot_arm &
-      sleep 3 && ros2 topic list
-    expect_contains: "/joint_states"
+      timeout 8 bash -c '
+        ros2 run my_bot_py robot_arm &
+        PID=$!
+        sleep 3
+        ros2 topic list | grep -q /joint_states
+        RESULT=$?
+        kill $PID 2>/dev/null
+        exit $RESULT
+      '
+    expect: "exit_code_0"
 
-  - name: "MuJoCo model loads"
-    command: |
-      python3 -c "
-      import mujoco
-      m = mujoco.MjModel.from_xml_path('/workspace/sim/models/mjcf/robot_arm.xml')
-      assert m.nu == 4, f'Expected 4 actuators, got {m.nu}'
-      print(f'OK: {m.nq} DOFs, {m.nu} actuators')
-      "
+  # ─── Benchmarks ───
+  - name: "Sim benchmark runs"
+    command: "cd /workspace && python3 scripts/benchmark_sim.py"
+    expect: "exit_code_0"
+
+  - name: "Control benchmark runs"
+    command: "cd /workspace && python3 scripts/benchmark_control.py"
     expect: "exit_code_0"

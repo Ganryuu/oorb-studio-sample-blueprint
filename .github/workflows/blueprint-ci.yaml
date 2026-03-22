@@ -1,0 +1,106 @@
+# Blueprint CI — validates that this Blueprint builds, tests, and validates.
+# Runs on every push and PR. Badge shown on the marketplace listing page.
+#
+# This template works for any OORB Blueprint. Copy it into your .github/workflows/.
+
+name: Blueprint CI
+
+on:
+  push:
+    branches: [main, blueprint]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+    container:
+      image: ros:jazzy
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            build-essential cmake python3-pip python3-colcon-common-extensions \
+            python3-rosdep \
+            && rm -rf /var/lib/apt/lists/*
+
+      - name: Install ROS dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            ros-jazzy-joint-state-publisher \
+            ros-jazzy-robot-state-publisher \
+            ros-jazzy-xacro \
+            ros-jazzy-rosbridge-server \
+            && rm -rf /var/lib/apt/lists/*
+
+      - name: Install pip dependencies
+        run: pip3 install --break-system-packages mujoco==3.1.6 numpy==1.26.4
+
+      - name: Build workspace
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd ros2_ws
+          colcon build --symlink-install
+        shell: bash
+
+      - name: Run colcon tests
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd ros2_ws
+          source install/setup.bash
+          colcon test
+          colcon test-result --verbose
+        shell: bash
+
+      - name: Validate Blueprint structure
+        run: |
+          echo "=== Checking required files ==="
+          test -f .oorb/blueprint.yaml   || (echo "FAIL: .oorb/blueprint.yaml missing" && exit 1)
+          test -f .oorb/agent.md         || (echo "FAIL: .oorb/agent.md missing" && exit 1)
+          test -f .oorb/listing.yaml     || (echo "FAIL: .oorb/listing.yaml missing" && exit 1)
+          test -f README.md              || (echo "FAIL: README.md missing" && exit 1)
+
+          echo "=== Checking for build artifacts ==="
+          test ! -d ros2_ws/build   || (echo "FAIL: ros2_ws/build/ committed" && exit 1)
+          test ! -d ros2_ws/install || (echo "FAIL: ros2_ws/install/ committed" && exit 1)
+          test ! -d ros2_ws/log    || (echo "FAIL: ros2_ws/log/ committed" && exit 1)
+
+          echo "=== Checking for credential files ==="
+          test ! -f .env             || (echo "FAIL: .env committed" && exit 1)
+          find . -name "*.pem" -o -name "*.key" | grep -q . && (echo "FAIL: credential files found" && exit 1) || true
+
+          echo "=== Checking ROS packages ==="
+          find ros2_ws/src -name "package.xml" | head -1 | grep -q . || (echo "FAIL: no package.xml found in ros2_ws/src/" && exit 1)
+
+          echo "=== All structural checks passed ==="
+
+      - name: Validate MuJoCo model
+        run: |
+          python3 -c "
+          import mujoco
+          m = mujoco.MjModel.from_xml_path('sim/models/mjcf/robot_arm.xml')
+          d = mujoco.MjData(m)
+          print(f'Model loaded: {m.nq} DOFs, {m.nu} actuators')
+          assert m.nu >= 1, 'No actuators found'
+          mujoco.mj_step(m, d)
+          print('Physics step OK')
+          "
+
+      - name: Validate URDF
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          xacro ros2_ws/src/my_bot_description/urdf/robot_arm.urdf.xacro > /tmp/robot.urdf
+          python3 -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('/tmp/robot.urdf')
+          root = tree.getroot()
+          joints = [j for j in root.findall('.//joint') if j.get('type') != 'fixed']
+          links = root.findall('.//link')
+          print(f'URDF: {len(links)} links, {len(joints)} joints')
+          assert len(joints) >= 4, f'Expected ≥4 joints, got {len(joints)}'
+          "
+        shell: bash

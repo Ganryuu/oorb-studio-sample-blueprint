@@ -59,15 +59,21 @@ page:
     and getting started with OORB Studio.
 
   features:
-    - "Publish and subscribe to joint states over ROS 2"
-    - "Control a simulated arm with position commands"
+    - "URDF-first robot model with parametric XACRO"
+    - "Multi-package workspace (description + bringup + control)"
+    - "Sim/hardware profile switching with launch files"
     - "MuJoCo MJCF model with PD actuators and keyframes"
-    - "Bridge ROS 2 and browser-based simulation via rosbridge"
+    - "Position control via ROS 2 topics"
+    - "Safety constraints (joint limits, workspace bounds, e-stop)"
+    - "CI pipeline with build, test, and validation checks"
+    - "Performance benchmarks (sim step rate, control latency)"
+    - "Rosbag recording configuration"
+    - "Browser ↔ ROS 2 bridge via rosbridge"
 
   prerequisites:
     - "Basic Python knowledge"
     - "Familiarity with terminal / command line"
-    - "No hardware needed — sim-only"
+    - "No hardware needed — sim-only (hardware profile available as template)"
 
   # ── Custom sections ──
   # Authors can add any number of sections. Each gets a heading + body.
@@ -85,13 +91,38 @@ page:
         Beginners to ROS 2 and robot simulation. If you've never controlled
         a robot arm in code before, start here.
 
-    - heading: "ROS Topics"
+    - heading: "ROS Interfaces"
       content: |
-        | Topic | Type | Purpose |
+        | Topic | Type | Hz | Purpose |
+        |---|---|---|---|
+        | `/joint_states` | sensor_msgs/JointState | 20-50 | Joint positions (4 joints) |
+        | `/position_controller/commands` | std_msgs/Float64MultiArray | — | Target positions (4 floats) |
+        | `/robot_description` | std_msgs/String | latch | URDF XML |
+        | `/tf` | tf2_msgs/TFMessage | 20-50 | Transform tree |
+        | `/e_stop` | std_msgs/Bool | — | Emergency stop |
+
+    - heading: "Profiles"
+      content: |
+        | Profile | Launch file | Hardware | Description |
+        |---|---|---|---|
+        | **sim** | `sim.launch.py` | No | MuJoCo simulation (default) |
+        | **hardware** | `hardware.launch.py` | Yes | Physical robot (template) |
+
+        Switch profiles with the Studio profile selector or launch directly.
+
+    - heading: "Safety"
+      content: |
+        Operational safety constraints are declared in `blueprint.yaml > safety`:
+        - Joint position and velocity limits per joint
+        - Cartesian workspace bounds: ±0.6m XY, 0-0.9m Z
+        - Emergency stop topic: `/e_stop`
+
+    - heading: "Benchmarks"
+      content: |
+        | Metric | Expected | Script |
         |---|---|---|
-        | `/joint_states` | sensor_msgs/JointState | Joint positions (4 joints @ 20 Hz) |
-        | `/position_controller/commands` | std_msgs/Float64MultiArray | Target positions (4 floats) |
-        | `/chatter` | std_msgs/String | Heartbeat |
+        | Sim step rate | >500 steps/sec | `scripts/benchmark_sim.py` |
+        | Control latency (p99) | <20ms | `scripts/benchmark_control.py` |
 
 # ─── Bill of Materials ───
 # Rendered as a parts table on the detail page.

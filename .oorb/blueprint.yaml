@@ -6,7 +6,7 @@
 
 oorb_blueprint: "1.0"
 
-# ─── What is this project? ───
+# ─── Identity ───
 # Technical identity only. All marketplace display content lives in listing.yaml.
 meta:
   name: "4-DOF Robot Arm"
@@ -14,22 +14,36 @@ meta:
   version: "0.1.0"
   license: "MIT"
   ros_distro: "jazzy"
-  robot_type: "arm"                # mobile_base | quadruped | arm | drone | custom
+  robot_type: "arm"                    # mobile_base | quadruped | arm | drone | custom
+  # Attribution chain — set automatically when forking a Blueprint
+  # forked_from:
+  #   slug: "oorb-studio/seed-arm"
+  #   version: "1.0.0"
+  #   url: "https://oorb.io/blueprints/seed-arm"
 
 # ─── Marketplace Listing ───
-# The listing file is the single source of truth for how this Blueprint appears
-# on its page at oorb.io/blueprints/<slug>. Users can edit it directly or via
-# the Studio UI editor — both produce the same result.
 listing: ".oorb/listing.yaml"
 
-# ─── Container resources ───
+# ─── Blueprint Inheritance ───
+# Extend a base Blueprint instead of starting from scratch.
+# Inherited fields are merged — override only what you change.
+# extends: "oorb-studio/seed-arm"
+# override:
+#   sim.default_scene: "sim/models/mjcf/my_robot.xml"
+#   dependencies.pip:
+#     - torch>=2.0
+#     - stable-baselines3
+
+# ─── Container Resources ───
 resources:
   cpu: 2
   ram_gb: 4
   storage_gb: 10
   gpu: false
 
-# ─── What to install ───
+# ─── Dependencies ───
+# Exact versions for reproducibility. Use >= only for packages where
+# minor updates are safe. Generate lock_file for full pinning.
 dependencies:
   system:
     - build-essential
@@ -41,23 +55,165 @@ dependencies:
     - robot-state-publisher
     - xacro
     - rosbridge-server
+    - ros2-controllers
+    - ros2-control
   pip:
-    - mujoco>=3.0
-    - numpy
+    - mujoco==3.1.6
+    - numpy==1.26.4
+  rosdep: true                         # Run rosdep install after clone
+  lock_file: ".oorb/pip.lock"          # Generated — exact pip versions
+  # docker_digest: "sha256:..."        # Pin exact base image (optional)
+
+# ─── Workspace Packages ───
+# Declares all ROS 2 packages in the workspace, their roles, and relationships.
+# Role types: description | msgs | bringup | control | perception | navigation | custom
+packages:
+  - name: "my_bot_description"
+    path: "ros2_ws/src/my_bot_description"
+    role: "description"
+    description: "URDF/XACRO robot model, meshes, and robot_state_publisher launch"
+
+  - name: "my_bot_bringup"
+    path: "ros2_ws/src/my_bot_bringup"
+    role: "bringup"
+    description: "Launch files and parameter configs for sim and hardware profiles"
+
+  - name: "my_bot_py"
+    path: "ros2_ws/src/my_bot_py"
+    role: "control"
+    description: "Application nodes — joint publisher, MuJoCo sim, position control"
+
+  # - name: "my_bot_msgs"
+  #   path: "ros2_ws/src/my_bot_msgs"
+  #   role: "msgs"
+  #   description: "Custom messages, services, and actions"
+
+# ─── Robot Model ───
+# URDF is the source of truth. MuJoCo/Gazebo scenes are derived.
+robot_model:
+  source: "urdf"                       # urdf | mjcf
+  urdf: "ros2_ws/src/my_bot_description/urdf/robot_arm.urdf.xacro"
+  meshes: "ros2_ws/src/my_bot_description/meshes"
+  auto_convert:
+    mjcf: true                         # Auto-generate MJCF from URDF on build
 
 # ─── Simulation ───
 sim:
-  engine: "mujoco"
+  engine: "mujoco"                     # mujoco | gazebo | none
   default_scene: "sim/models/mjcf/robot_arm.xml"
+  settings:
+    timestep: 0.002
+    integrator: "RK4"
+
+# ─── ROS Interfaces ───
+# Declares all topics, services, and transforms the robot uses.
+# Studio uses this to auto-generate topic monitors, visualizers, and TF tree views.
+interfaces:
+  sensors:
+    - name: "Joint States"
+      topic: "/joint_states"
+      type: "sensor_msgs/JointState"
+      hz: 20
+      description: "Joint positions, velocities, efforts for 4 joints"
+    # - name: "RGB Camera"
+    #   topic: "/camera/image_raw"
+    #   type: "sensor_msgs/Image"
+    #   hz: 30
+    #   frame_id: "camera_link"
+    # - name: "IMU"
+    #   topic: "/imu/data"
+    #   type: "sensor_msgs/Imu"
+    #   hz: 100
+    #   frame_id: "imu_link"
+    # - name: "Lidar"
+    #   topic: "/scan"
+    #   type: "sensor_msgs/LaserScan"
+    #   hz: 10
+    #   frame_id: "lidar_link"
+
+  actuators:
+    - name: "Position Controller"
+      topic: "/position_controller/commands"
+      type: "std_msgs/Float64MultiArray"
+      description: "Target joint positions (4 floats in radians)"
+
+  heartbeat:
+    - name: "Chatter"
+      topic: "/chatter"
+      type: "std_msgs/String"
+      hz: 2
+
+  transforms:
+    - parent: "base_link"
+      child: "link1"
+    - parent: "link1"
+      child: "link2"
+    - parent: "link2"
+      child: "link3"
+    - parent: "link3"
+      child: "link4"
+
+# ─── Sim / Hardware Profiles ───
+# Each profile defines a launch configuration for a specific deployment target.
+# Studio shows a profile selector in the workspace UI.
+profiles:
+  sim:
+    launch: "ros2 launch my_bot_bringup sim.launch.py"
+    params: "ros2_ws/src/my_bot_bringup/config/sim_params.yaml"
+    hardware_required: false
+    description: "Full MuJoCo simulation — no hardware needed"
+
+  # hardware:
+  #   launch: "ros2 launch my_bot_bringup hardware.launch.py"
+  #   params: "ros2_ws/src/my_bot_bringup/config/hardware_params.yaml"
+  #   hardware_required: true
+  #   connection:
+  #     method: "rosbridge"            # rosbridge | micro-ros | serial | ssh
+  #     instructions: "docs/hardware_setup.md"
+  #   description: "Physical robot — requires servo motors and MCU"
+
+# ─── Safety Constraints ───
+# Operational limits enforced at runtime. Tighter than URDF mechanical limits.
+# Studio displays these in the workspace and the agent uses them for validation.
+safety:
+  joint_limits:
+    joint_base:
+      position: [-3.14, 3.14]         # rad (mechanical: ±180°)
+      velocity: 2.0                    # rad/s max
+    joint_shoulder:
+      position: [-1.57, 1.57]         # rad (mechanical: ±90°)
+      velocity: 1.5
+    joint_elbow:
+      position: [-2.36, 0.0]          # rad (mechanical: -135° to 0°)
+      velocity: 1.5
+    joint_wrist:
+      position: [-1.57, 1.57]         # rad (mechanical: ±90°)
+      velocity: 2.0
+  workspace_bounds:                    # Cartesian workspace envelope (meters)
+    x: [-0.6, 0.6]
+    y: [-0.6, 0.6]
+    z: [0.0, 0.9]
+  emergency_stop_topic: "/e_stop"
+  # max_force_n: 50                   # Max end-effector force (optional)
+  # collision_check: true             # Enable self-collision checking (optional)
 
 # ─── Assets ───
-# fab/uploads/ is where Studio puts user-uploaded files (URDF, meshes, STEP, etc.)
-# Studio knows to read from here when publishing/updating a Blueprint.
-# sim/models/mjcf/ is where MuJoCo scenes live (can reference meshes in fab/uploads/).
 assets:
-  uploads: "fab/uploads"             # Studio upload landing zone
-  sim_models: "sim/models/mjcf"      # MuJoCo scene directory
-  cad: "fab"                         # CAD root (STEP, STL, URDF source files)
+  uploads: "fab/uploads"               # Studio upload landing zone
+  sim_models: "sim/models/mjcf"        # MuJoCo scene directory
+  cad: "fab"                           # CAD root (STEP, STL, URDF source files)
+
+# ─── Recording ───
+# Defines what to record during workspace sessions.
+# Studio adds a "Record" button that knows which topics matter for this project.
+recording:
+  default_topics:
+    - "/joint_states"
+    - "/tf"
+    - "/position_controller/commands"
+  storage: ".oorb/state/bags"
+  max_duration: "5m"
+  format: "mcap"                       # mcap | db3
 
 # ─── What to run on workspace start ───
 on_start:
@@ -69,48 +225,71 @@ on_start:
       source install/setup.bash
     terminal: "build"
 
-  - name: "Run robot arm demo"
+  - name: "Launch sim"
     command: >
       source /opt/ros/jazzy/setup.bash &&
       source /workspace/ros2_ws/install/setup.bash &&
-      ros2 run my_bot_py robot_arm
+      ros2 launch my_bot_bringup sim.launch.py
     terminal: "ros"
     wait_for: "Build"
 
-# ─── Runbook (shows in agent PLAN tab as actionable steps) ───
+# ─── Runbook ───
 runbook:
   - step: "Build the workspace"
     detail: "colcon build --symlink-install in ros2_ws/"
     verify: "Exit code 0, no errors"
-  - step: "Run the robot arm publisher"
-    detail: "ros2 run my_bot_py robot_arm"
-    verify: "/joint_states publishing at 20 Hz"
-  - step: "Watch in sim"
-    detail: "MuJoCo tab loads robot_arm.xml automatically"
-    verify: "Arm moves with sinusoidal joint motion"
-  - step: "Send your own commands"
-    detail: "ros2 topic pub /position_controller/commands std_msgs/Float64MultiArray '{data: [0.5, 0.3, -0.8, 0.2]}'"
-    verify: "Arm moves to the target position"
+  - step: "Launch the sim profile"
+    detail: "ros2 launch my_bot_bringup sim.launch.py"
+    verify: "/joint_states publishing, MuJoCo tab loads arm model"
+  - step: "Send position commands"
+    detail: >
+      ros2 topic pub /position_controller/commands
+      std_msgs/msg/Float64MultiArray '{data: [0.5, 0.3, -0.8, 0.2]}'
+    verify: "Arm moves to target position in sim"
+  - step: "Record a bag"
+    detail: "Use Studio Record button or: ros2 bag record /joint_states /tf -o test_bag --storage mcap"
+    verify: "Bag file created in .oorb/state/bags/"
+
+# ─── Benchmarks ───
+# Performance tests that Studio can run and display as badges on the listing page.
+benchmarks:
+  - name: "Sim step rate"
+    command: "python3 scripts/benchmark_sim.py"
+    metric: "steps_per_second"
+    expected: ">500"
+  - name: "Control loop latency"
+    command: "python3 scripts/benchmark_control.py"
+    metric: "p99_ms"
+    expected: "<20"
+  - name: "Build time"
+    command: "cd /workspace/ros2_ws && colcon build --symlink-install 2>&1 | tail -1"
+    metric: "seconds"
+    expected: "<60"
+
+# ─── Training / RL Pipeline (optional — for advanced Blueprints) ───
+# training:
+#   framework: "stable-baselines3"     # stable-baselines3 | cleanrl | custom
+#   env: "scripts/train_env.py"        # Gym/Gymnasium environment definition
+#   config: "config/training.yaml"     # Hyperparameters
+#   checkpoints: "rl_models/"          # Saved model weights
+#   reward_function: "scripts/reward.py"
+#   tensorboard_log: "logs/tensorboard/"
+#   eval_episodes: 100                 # Episodes for evaluation
+#   on_train_complete:                 # What to do after training finishes
+#     - "python3 scripts/export_policy.py"
 
 # ─── Workspace State ───
-# When a user pushes/publishes a Blueprint, Studio can include the workspace
-# state so that anyone who imports it gets the full context — not just the code,
-# but the conversations, logs, and outputs from the original workspace.
-# This is what makes Blueprints a "workspace snapshot" not just a template.
 state:
-  conversations: ".oorb/state/conversations"   # Agent chat threads (JSONL)
-  logs: ".oorb/state/logs"                     # Terminal/build/ROS output logs
-  outputs: ".oorb/state/outputs"               # Generated artifacts (plots, data, recordings)
-  restore_on_import: true                      # Reload into Studio UI on import
+  conversations: ".oorb/state/conversations"
+  logs: ".oorb/state/logs"
+  outputs: ".oorb/state/outputs"
+  bags: ".oorb/state/bags"
+  restore_on_import: true
 
-# Conversation format: one .jsonl file per thread
-# Each line: {"role": "user|agent|system", "content": "...", "timestamp": "ISO8601"}
-# File naming: NNN_topic-slug.jsonl (e.g. 001_initial-setup.jsonl)
-#
-# Log format: plain text with timestamps, one file per terminal/source
-# File naming: <terminal-name>.log (e.g. build.log, ros.log)
-#
-# Outputs: any files generated during the session (plots, CSVs, rosbags, etc.)
+# ─── CI/CD ───
+ci:
+  pipeline: ".github/workflows/blueprint-ci.yaml"
+  badge: true                          # Show CI status badge on listing page
 
 # ─── Hardware (optional — sim-only projects leave this out) ───
 # hardware:

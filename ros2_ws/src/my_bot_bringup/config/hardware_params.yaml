@@ -1,0 +1,31 @@
+# Hardware parameters — used by hardware.launch.py
+# These values are tuned for physical servo motors.
+# Adjust gains and limits for your specific hardware.
+
+# TODO: Configure for your hardware setup
+# mcu_driver_node:
+#   ros__parameters:
+#     serial_port: "/dev/ttyUSB0"
+#     baud_rate: 115200
+#     joint_names:
+#       - joint_base
+#       - joint_shoulder
+#       - joint_elbow
+#       - joint_wrist
+#     servo_ids: [1, 2, 3, 4]
+#     publish_rate: 20.0        # Hz — lower than sim for real hardware
+#     # Safety limits (tighter than URDF for physical safety)
+#     position_limits:
+#       joint_base: [-2.0, 2.0]
+#       joint_shoulder: [-1.2, 1.2]
+#       joint_elbow: [-2.0, 0.0]
+#       joint_wrist: [-1.2, 1.2]
+#     velocity_limit: 1.0       # rad/s — conservative for real servos
+
+robot_state_publisher:
+  ros__parameters:
+    use_sim_time: false
+
+rosbridge_websocket:
+  ros__parameters:
+    port: 9090
