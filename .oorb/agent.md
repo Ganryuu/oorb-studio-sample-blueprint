@@ -53,6 +53,16 @@ Nodes:
 - `colcon build` says "no packages"? → You're in the wrong directory, cd to `ros2_ws/`
 - Position commands ignored? → Make sure you're publishing to `/position_controller/commands` not `/cmd_vel`
 
+## Workspace State
+
+This Blueprint includes workspace state from the original session in `.oorb/state/`:
+
+- **Conversations** (`.oorb/state/conversations/`) — Agent chat threads as JSONL. Each file is one conversation. On import, Studio loads these into the chat UI as previous sessions so the agent has full context of what was already done, discussed, and debugged.
+- **Logs** (`.oorb/state/logs/`) — Build output, terminal output, ROS node logs. On import, Studio populates the logs UI so users can see what happened in the original workspace.
+- **Outputs** (`.oorb/state/outputs/`) — Generated artifacts (plots, rosbags, exported data). On import, these appear in the file tree.
+
+When the agent sees a workspace with conversation history, it should read the thread summaries to understand what the user has already tried, what worked, and what didn't — avoiding repeated suggestions and building on prior progress.
+
 ## Assets & Uploads
 
 - `fab/uploads/` — Studio upload landing zone. When users upload files (URDF, meshes, STEP, MJCF folders) via the Studio UI, they land here as `fab/uploads/<foldername>/`. The import/publish flow reads from this directory.

@@ -1,0 +1,8 @@
+[2026-03-20T14:30:05Z] === colcon build --symlink-install ===
+[2026-03-20T14:30:06Z] Starting >>> my_bot_py
+[2026-03-20T14:30:15Z] --- stderr: my_bot_py
+[2026-03-20T14:30:15Z] /usr/lib/python3/dist-packages/setuptools/command/install.py:34: SetuptoolsDeprecationWarning: setup.py install is deprecated.
+[2026-03-20T14:30:15Z] ---
+[2026-03-20T14:30:28Z] Finished <<< my_bot_py [22.5s]
+[2026-03-20T14:30:28Z] Summary: 1 package finished [23.1s]
+[2026-03-20T14:30:28Z]   1 package had stderr output: my_bot_py

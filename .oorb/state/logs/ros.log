@@ -1,0 +1,11 @@
+[2026-03-20T14:30:33Z] [INFO] [robot_arm_publisher]: Publishing /joint_states at 20 Hz
+[2026-03-20T14:30:33Z] [INFO] [robot_arm_publisher]: Joint names: ['joint_base', 'joint_shoulder', 'joint_elbow', 'joint_wrist']
+[2026-03-20T14:30:34Z] [INFO] [robot_arm_publisher]: t=0.050 joints=[0.000, 0.050, -0.050, 0.025]
+[2026-03-20T14:30:35Z] [INFO] [robot_arm_publisher]: t=0.100 joints=[0.000, 0.100, -0.100, 0.050]
+[2026-03-20T14:30:36Z] [INFO] [robot_arm_publisher]: t=0.150 joints=[0.001, 0.149, -0.149, 0.075]
+[2026-03-20T14:31:08Z] [INFO] [mujoco_sim_node]: MuJoCo model loaded from /workspace/sim/models/mjcf/robot_arm.xml
+[2026-03-20T14:31:08Z] [INFO] [mujoco_sim_node]: Model: 4 DOFs, 4 actuators
+[2026-03-20T14:31:08Z] [INFO] [mujoco_sim_node]: Publishing /joint_states at 50 Hz
+[2026-03-20T14:31:08Z] [INFO] [mujoco_sim_node]: Listening on /position_controller/commands
+[2026-03-20T14:31:12Z] [INFO] [mujoco_sim_node]: Received position command: [0.5, 0.3, -0.8, 0.2]
+[2026-03-20T14:31:12Z] [INFO] [mujoco_sim_node]: Moving to target positions...

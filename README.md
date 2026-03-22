@@ -53,7 +53,11 @@ ros2 topic pub /position_controller/commands std_msgs/msg/Float64MultiArray "{da
 .oorb/                      ← OORB Studio integration
 ├── blueprint.yaml          ← Manifest (deps, resources, sim, runbook)
 ├── agent.md                ← Agent context (the agent reads this automatically)
-└── validate.yaml           ← Health checks
+├── validate.yaml           ← Health checks
+└── state/                  ← Workspace state (restored on import)
+    ├── conversations/      ← Agent chat threads (JSONL, one file per thread)
+    ├── logs/               ← Build/terminal/ROS output logs
+    └── outputs/            ← Generated artifacts (plots, rosbags, data)
 .devcontainer/              ← Local dev (VS Code)
 ├── Dockerfile              ← Replicates Studio's container
 └── devcontainer.json
