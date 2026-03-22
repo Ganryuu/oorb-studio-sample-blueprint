@@ -63,6 +63,21 @@ This Blueprint includes workspace state from the original session in `.oorb/stat
 
 When the agent sees a workspace with conversation history, it should read the thread summaries to understand what the user has already tried, what worked, and what didn't — avoiding repeated suggestions and building on prior progress.
 
+## Marketplace Listing
+
+`.oorb/listing.yaml` is the single source of truth for how this Blueprint appears
+on its marketplace page (`oorb.io/blueprints/4dof-robot-arm`). It contains:
+- Display identity (title, tagline, authors)
+- Catalog card (thumbnail, tags, difficulty, description)
+- Detail page content (cover image, gallery, overview, features, custom sections)
+- BOM (bill of materials)
+- Links (repo, docs, video, community)
+- SEO/Open Graph metadata
+
+Users can edit `listing.yaml` directly or through the Studio UI editor.
+The `docs/ABOUT.md` and `docs/bom.csv` files mirror this content for GitHub readability
+but `listing.yaml` is what the backend parses.
+
 ## Assets & Uploads
 
 - `fab/uploads/` — Studio upload landing zone. When users upload files (URDF, meshes, STEP, MJCF folders) via the Studio UI, they land here as `fab/uploads/<foldername>/`. The import/publish flow reads from this directory.

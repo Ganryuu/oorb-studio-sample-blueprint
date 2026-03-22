@@ -1,0 +1,133 @@
+# .oorb/listing.yaml — Blueprint Marketplace Listing v1
+#
+# Single source of truth for how this Blueprint appears on its page at
+# oorb.io/blueprints/<slug>. Edit this file directly or use the Studio
+# UI editor — both produce the same result.
+#
+# The backend parses this file to render:
+#   - Catalog card (browse/search results)
+#   - Detail page (oorb.io/blueprints/<slug>)
+#   - Open Graph / SEO metadata
+#   - Embed widget ("Open in Studio" badge context)
+
+oorb_listing: "1.0"
+
+# ─── Display Identity ───
+title: "4-DOF Robot Arm"
+tagline: "Learn joint-space control with ROS 2 and MuJoCo"
+slug: "4dof-robot-arm"                     # URL: oorb.io/blueprints/4dof-robot-arm
+version: "0.1.0"
+license: "MIT"
+
+authors:
+  - name: "OORB Studio"
+    email: "blueprints@oorb.io"
+    avatar: "docs/images/oorb-avatar.png"  # Shown on the page (optional)
+    url: "https://oorb.io"                 # Profile link (optional)
+
+# ─── Catalog Card ───
+# Shown in browse/search results on the marketplace
+card:
+  thumbnail: "docs/images/thumbnail.png"   # 400×300 recommended
+  description: >
+    A 4-DOF robot arm with ROS 2 position control and MuJoCo simulation.
+    Publish joint commands, see them execute in the browser sim.
+  tags: [robot-arm, manipulation, ros2, mujoco, beginner]
+  difficulty: "beginner"                   # beginner | intermediate | advanced
+  robot_type: "arm"                        # mobile_base | quadruped | arm | drone | custom
+  ros_distro: "jazzy"
+  estimated_time: "30 min"                 # How long to complete the runbook
+
+# ─── Detail Page ───
+# Rendered at oorb.io/blueprints/4dof-robot-arm
+page:
+  cover_image: "docs/images/cover.png"     # Hero banner (1200×400 recommended)
+
+  gallery:
+    - path: "docs/images/sim_screenshot.png"
+      caption: "MuJoCo simulation running in the browser"
+    - path: "docs/images/real_hardware.jpg"
+      caption: "Physical arm with MG996R servos"
+
+  # ── Main body sections ──
+  # Rendered in order. Content fields support Markdown.
+  # These are what the user edits via the Studio UI or directly in this file.
+
+  overview: |
+    A simple 4-joint robot arm running ROS 2 Jazzy with MuJoCo physics simulation.
+    Built as a learning project for joint-space control, URDF/MJCF workflows,
+    and getting started with OORB Studio.
+
+  features:
+    - "Publish and subscribe to joint states over ROS 2"
+    - "Control a simulated arm with position commands"
+    - "MuJoCo MJCF model with PD actuators and keyframes"
+    - "Bridge ROS 2 and browser-based simulation via rosbridge"
+
+  prerequisites:
+    - "Basic Python knowledge"
+    - "Familiarity with terminal / command line"
+    - "No hardware needed — sim-only"
+
+  # ── Custom sections ──
+  # Authors can add any number of sections. Each gets a heading + body.
+  # Order here = order on the page.
+  sections:
+    - heading: "What you'll learn"
+      content: |
+        - How ROS 2 nodes publish and subscribe to joint states
+        - How MuJoCo MJCF models define robot kinematics and actuators
+        - How to control a simulated arm with position commands
+        - How to bridge ROS 2 and browser-based simulation
+
+    - heading: "Who is this for"
+      content: |
+        Beginners to ROS 2 and robot simulation. If you've never controlled
+        a robot arm in code before, start here.
+
+    - heading: "ROS Topics"
+      content: |
+        | Topic | Type | Purpose |
+        |---|---|---|
+        | `/joint_states` | sensor_msgs/JointState | Joint positions (4 joints @ 20 Hz) |
+        | `/position_controller/commands` | std_msgs/Float64MultiArray | Target positions (4 floats) |
+        | `/chatter` | std_msgs/String | Heartbeat |
+
+# ─── Bill of Materials ───
+# Rendered as a parts table on the detail page.
+# For sim-only blueprints, set required: false and leave parts empty.
+bom:
+  required: false
+  parts: []
+  # Example with hardware:
+  # required: true
+  # parts:
+  #   - name: "MG996R Servo"
+  #     quantity: 4
+  #     role: "Joint actuators"
+  #     link: "https://example.com/servo"
+  #     price_usd: 8.99
+  #     notes: "Any 180° servo works"
+  #   - name: "Arduino Mega"
+  #     quantity: 1
+  #     role: "Microcontroller"
+  #     link: "https://example.com/mega"
+  #     price_usd: 12.00
+  #     notes: ""
+
+# ─── Links ───
+# Shown as buttons/links on the detail page
+links:
+  repository: "https://github.com/oorb-studio/blueprint-4dof-robot-arm"
+  documentation: ""                        # External docs URL (optional)
+  video: ""                                # YouTube/tutorial (optional)
+  community: ""                            # Discord/forum (optional)
+
+# ─── SEO / Open Graph ───
+# Auto-generated from title + card.description + cover_image if omitted.
+# Override here for custom social sharing previews.
+# seo:
+#   og_title: "4-DOF Robot Arm — OORB Blueprint"
+#   og_description: "Learn joint-space control with ROS 2 and MuJoCo simulation"
+#   og_image: "docs/images/cover.png"
+#   keywords: ["robot arm", "ROS 2", "MuJoCo", "simulation", "robotics"]

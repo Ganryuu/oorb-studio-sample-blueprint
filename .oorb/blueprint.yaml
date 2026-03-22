@@ -7,28 +7,20 @@
 oorb_blueprint: "1.0"
 
 # ─── What is this project? ───
+# Technical identity only. All marketplace display content lives in listing.yaml.
 meta:
   name: "4-DOF Robot Arm"
   slug: "4dof-robot-arm"
-  description: >
-    A 4-DOF robot arm with ROS 2 position control and MuJoCo simulation.
-    Publish joint commands, see them execute in the browser sim.
-    Designed for learning joint-space control and URDF/MJCF workflows.
   version: "0.1.0"
   license: "MIT"
-  authors:
-    - name: "OORB Studio"
-      email: "blueprints@oorb.io"
-  tags: [robot-arm, manipulation, ros2, mujoco, beginner]
-  difficulty: "beginner"           # beginner | intermediate | advanced
-  robot_type: "arm"                # mobile_base | quadruped | arm | drone | custom
   ros_distro: "jazzy"
-  thumbnail: "docs/images/thumbnail.png"
-  # These fields are parsed by the marketplace catalog page
-  cover_image: "docs/images/cover.png"
-  gallery:
-    - "docs/images/sim_screenshot.png"
-    - "docs/images/real_hardware.jpg"
+  robot_type: "arm"                # mobile_base | quadruped | arm | drone | custom
+
+# ─── Marketplace Listing ───
+# The listing file is the single source of truth for how this Blueprint appears
+# on its page at oorb.io/blueprints/<slug>. Users can edit it directly or via
+# the Studio UI editor — both produce the same result.
+listing: ".oorb/listing.yaml"
 
 # ─── Container resources ───
 resources:

@@ -52,6 +52,7 @@ ros2 topic pub /position_controller/commands std_msgs/msg/Float64MultiArray "{da
 ```
 .oorb/                      ← OORB Studio integration
 ├── blueprint.yaml          ← Manifest (deps, resources, sim, runbook)
+├── listing.yaml            ← Marketplace page content (single source of truth)
 ├── agent.md                ← Agent context (the agent reads this automatically)
 ├── validate.yaml           ← Health checks
 └── state/                  ← Workspace state (restored on import)
