@@ -1,0 +1,106 @@
+# .oorb/blueprint.yaml — OORB Studio Blueprint Manifest v1
+#
+# This file is what makes a repo a Blueprint.
+# Studio reads it on import. Local users read it for setup context.
+# Everything else in the repo is standard ROS 2 / robotics project files.
+
+oorb_blueprint: "1.0"
+
+# ─── What is this project? ───
+meta:
+  name: "4-DOF Robot Arm"
+  slug: "4dof-robot-arm"
+  description: >
+    A 4-DOF robot arm with ROS 2 position control and MuJoCo simulation.
+    Publish joint commands, see them execute in the browser sim.
+    Designed for learning joint-space control and URDF/MJCF workflows.
+  version: "0.1.0"
+  license: "MIT"
+  authors:
+    - name: "OORB Studio"
+      email: "blueprints@oorb.io"
+  tags: [robot-arm, manipulation, ros2, mujoco, beginner]
+  difficulty: "beginner"           # beginner | intermediate | advanced
+  robot_type: "arm"                # mobile_base | quadruped | arm | drone | custom
+  ros_distro: "jazzy"
+  thumbnail: "docs/images/thumbnail.png"
+  # These fields are parsed by the marketplace catalog page
+  cover_image: "docs/images/cover.png"
+  gallery:
+    - "docs/images/sim_screenshot.png"
+    - "docs/images/real_hardware.jpg"
+
+# ─── Container resources ───
+resources:
+  cpu: 2
+  ram_gb: 4
+  storage_gb: 10
+  gpu: false
+
+# ─── What to install ───
+dependencies:
+  system:
+    - build-essential
+    - cmake
+    - python3-pip
+    - python3-colcon-common-extensions
+  ros:
+    - joint-state-publisher
+    - robot-state-publisher
+    - xacro
+    - rosbridge-server
+  pip:
+    - mujoco>=3.0
+    - numpy
+
+# ─── Simulation ───
+sim:
+  engine: "mujoco"
+  default_scene: "sim/models/mjcf/robot_arm.xml"
+
+# ─── What to run on workspace start ───
+on_start:
+  - name: "Build"
+    command: >
+      cd /workspace/ros2_ws &&
+      source /opt/ros/jazzy/setup.bash &&
+      colcon build --symlink-install &&
+      source install/setup.bash
+    terminal: "build"
+
+  - name: "Run robot arm demo"
+    command: >
+      source /opt/ros/jazzy/setup.bash &&
+      source /workspace/ros2_ws/install/setup.bash &&
+      ros2 run my_bot_py robot_arm
+    terminal: "ros"
+    wait_for: "Build"
+
+# ─── Runbook (shows in agent PLAN tab as actionable steps) ───
+runbook:
+  - step: "Build the workspace"
+    detail: "colcon build --symlink-install in ros2_ws/"
+    verify: "Exit code 0, no errors"
+  - step: "Run the robot arm publisher"
+    detail: "ros2 run my_bot_py robot_arm"
+    verify: "/joint_states publishing at 20 Hz"
+  - step: "Watch in sim"
+    detail: "MuJoCo tab loads robot_arm.xml automatically"
+    verify: "Arm moves with sinusoidal joint motion"
+  - step: "Send your own commands"
+    detail: "ros2 topic pub /position_controller/commands std_msgs/Float64MultiArray '{data: [0.5, 0.3, -0.8, 0.2]}'"
+    verify: "Arm moves to the target position"
+
+# ─── Hardware (optional — sim-only projects leave this out) ───
+# hardware:
+#   required: false
+#   bom: "docs/bom.csv"
+#   assembly_guide: "docs/assembly.md"
+#   parts:
+#     - name: "MG996R Servo"
+#       quantity: 4
+#       role: "Joint actuators"
+#       link: "https://example.com/servo"
+#   connection:
+#     method: "rosbridge"
+#     instructions: "docs/hardware_connection.md"

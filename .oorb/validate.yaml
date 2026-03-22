@@ -1,0 +1,25 @@
+# .oorb/validate.yaml — what "working" means for this Blueprint
+oorb_validate: "1.0"
+
+checks:
+  - name: "Packages build"
+    command: "cd /workspace/ros2_ws && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install"
+    expect: "exit_code_0"
+
+  - name: "Robot arm node runs"
+    command: |
+      source /opt/ros/jazzy/setup.bash &&
+      source /workspace/ros2_ws/install/setup.bash &&
+      timeout 5 ros2 run my_bot_py robot_arm &
+      sleep 3 && ros2 topic list
+    expect_contains: "/joint_states"
+
+  - name: "MuJoCo model loads"
+    command: |
+      python3 -c "
+      import mujoco
+      m = mujoco.MjModel.from_xml_path('/workspace/sim/models/mjcf/robot_arm.xml')
+      assert m.nu == 4, f'Expected 4 actuators, got {m.nu}'
+      print(f'OK: {m.nq} DOFs, {m.nu} actuators')
+      "
+    expect: "exit_code_0"
