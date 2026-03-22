@@ -58,6 +58,15 @@ sim:
   engine: "mujoco"
   default_scene: "sim/models/mjcf/robot_arm.xml"
 
+# ─── Assets ───
+# fab/uploads/ is where Studio puts user-uploaded files (URDF, meshes, STEP, etc.)
+# Studio knows to read from here when publishing/updating a Blueprint.
+# sim/models/mjcf/ is where MuJoCo scenes live (can reference meshes in fab/uploads/).
+assets:
+  uploads: "fab/uploads"             # Studio upload landing zone
+  sim_models: "sim/models/mjcf"      # MuJoCo scene directory
+  cad: "fab"                         # CAD root (STEP, STL, URDF source files)
+
 # ─── What to run on workspace start ───
 on_start:
   - name: "Build"

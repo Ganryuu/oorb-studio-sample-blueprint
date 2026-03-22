@@ -70,7 +70,8 @@ docs/                       ← Marketplace content
 ├── ABOUT.md                ← Parsed for the catalog detail page
 ├── bom.csv                 ← Bill of materials
 └── images/                 ← Screenshots, photos, diagrams
-fab/                        ← CAD assets
+fab/                        ← CAD assets & uploads
+├── uploads/                ← Studio upload landing zone (user-uploaded files)
 ├── step/                   ← STEP files for manufacturing
 └── stl/                    ← STL files for 3D printing
 ```

@@ -53,6 +53,12 @@ Nodes:
 - `colcon build` says "no packages"? → You're in the wrong directory, cd to `ros2_ws/`
 - Position commands ignored? → Make sure you're publishing to `/position_controller/commands` not `/cmd_vel`
 
+## Assets & Uploads
+
+- `fab/uploads/` — Studio upload landing zone. When users upload files (URDF, meshes, STEP, MJCF folders) via the Studio UI, they land here as `fab/uploads/<foldername>/`. The import/publish flow reads from this directory.
+- `sim/models/mjcf/` — MuJoCo scene directory. Scenes here can reference meshes from `fab/uploads/` using relative paths.
+- `fab/` — CAD root (STEP, STL, URDF source files). Subdirectories: `fab/step/`, `fab/stl/`, `fab/uploads/`.
+
 ## File Map
 
 - `ros2_ws/src/my_bot_py/my_bot_py/robot_arm_publisher.py` — Demo sinusoidal publisher
@@ -60,3 +66,6 @@ Nodes:
 - `ros2_ws/src/my_bot_py/my_bot_py/talker.py` — Hello world node
 - `ros2_ws/src/my_bot_py/setup.py` — Entry points: talker, robot_arm, mujoco_sim
 - `sim/models/mjcf/robot_arm.xml` — MuJoCo arm model (4 DOF, PD actuators)
+- `fab/uploads/` — Studio upload landing zone (user-uploaded files)
+- `fab/step/` — STEP files for manufacturing
+- `fab/stl/` — STL files for 3D printing
