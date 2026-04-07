@@ -12,10 +12,12 @@ def generate_launch_description():
     robot_description = Command(['xacro ', xacro_file])
 
     return LaunchDescription([
-        Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            parameters=[{'robot_description': robot_description}],
-            output='screen',
-        ),
+    Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        parameters=[{
+            'robot_description': ParameterValue(robot_description, value_type=str)
+        }],
+        output='screen',
+        )
     ])
