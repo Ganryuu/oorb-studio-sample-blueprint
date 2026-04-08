@@ -243,6 +243,7 @@ on_start:
       ros2 launch lite6_bringup sim.launch.py
     terminal: "ros"
     wait_for: "Build"
+    daemon: true
 
 # ─── Runbook ───
 runbook:
