@@ -9,10 +9,10 @@ oorb_blueprint: "1.0"
 # ─── Identity ───
 # Technical identity only. All marketplace display content lives in listing.yaml.
 meta:
-  name: "4-DOF Robot Arm"
-  slug: "4dof-robot-arm"
+  name: "UFactory Lite 6"
+  slug: "ufactory-lite6"
   version: "0.1.0"
-  license: "MIT"
+  license: "BSD-3-Clause"
   ros_distro: "jazzy"
   robot_type: "arm"                    # mobile_base | quadruped | arm | drone | custom
   # Attribution chain — set automatically when forking a Blueprint
@@ -58,30 +58,31 @@ dependencies:
     - ros2-controllers
     - ros2-control
   pip:
-    - mujoco==3.1.6
-    - numpy==1.26.4
+    - mujoco>=3.1.0
+    - numpy>=1.26
   rosdep: true                         # Run rosdep install after clone
-  lock_file: ".oorb/pip.lock"          # Generated — exact pip versions
+  # lock_file: ".oorb/pip.lock"        # Generate with: pip freeze > .oorb/pip.lock
+  # lock_file: ".oorb/uv.lock"        # Or with uv:   uv pip compile requirements.in -o .oorb/uv.lock
   # docker_digest: "sha256:..."        # Pin exact base image (optional)
 
 # ─── Workspace Packages ───
 # Declares all ROS 2 packages in the workspace, their roles, and relationships.
 # Role types: description | msgs | bringup | control | perception | navigation | custom
 packages:
-  - name: "my_bot_description"
-    path: "ros2_ws/src/my_bot_description"
+  - name: "lite6_description"
+    path: "ros2_ws/src/lite6_description"
     role: "description"
-    description: "URDF/XACRO robot model, meshes, and robot_state_publisher launch"
+    description: "URDF/XACRO model with real STL meshes (visual + collision), robot_state_publisher launch"
 
-  - name: "my_bot_bringup"
-    path: "ros2_ws/src/my_bot_bringup"
+  - name: "lite6_bringup"
+    path: "ros2_ws/src/lite6_bringup"
     role: "bringup"
     description: "Launch files and parameter configs for sim and hardware profiles"
 
-  - name: "my_bot_py"
-    path: "ros2_ws/src/my_bot_py"
+  - name: "lite6_control"
+    path: "ros2_ws/src/lite6_control"
     role: "control"
-    description: "Application nodes — joint publisher, MuJoCo sim, position control"
+    description: "MuJoCo sim node (6-DOF position control), demo joint publisher, heartbeat"
 
   # - name: "my_bot_msgs"
   #   path: "ros2_ws/src/my_bot_msgs"
@@ -92,18 +93,18 @@ packages:
 # URDF is the source of truth. MuJoCo/Gazebo scenes are derived.
 robot_model:
   source: "urdf"                       # urdf | mjcf
-  urdf: "ros2_ws/src/my_bot_description/urdf/robot_arm.urdf.xacro"
-  meshes: "ros2_ws/src/my_bot_description/meshes"
+  urdf: "ros2_ws/src/lite6_description/urdf/lite6.urdf.xacro"
+  meshes: "ros2_ws/src/lite6_description/meshes"
   auto_convert:
     mjcf: true                         # Auto-generate MJCF from URDF on build
 
 # ─── Simulation ───
 sim:
   engine: "mujoco"                     # mujoco | gazebo | none
-  default_scene: "sim/models/mjcf/robot_arm.xml"
+  default_scene: "sim/models/mjcf/ufactory_lite6/scene.xml"
   settings:
     timestep: 0.002
-    integrator: "RK4"
+    integrator: "implicitfast"
 
 # ─── ROS Interfaces ───
 # Declares all topics, services, and transforms the robot uses.
@@ -113,8 +114,8 @@ interfaces:
     - name: "Joint States"
       topic: "/joint_states"
       type: "sensor_msgs/JointState"
-      hz: 20
-      description: "Joint positions, velocities, efforts for 4 joints"
+      hz: 50
+      description: "Joint positions, velocities, efforts for 6 joints"
     # - name: "RGB Camera"
     #   topic: "/camera/image_raw"
     #   type: "sensor_msgs/Image"
@@ -135,7 +136,7 @@ interfaces:
     - name: "Position Controller"
       topic: "/position_controller/commands"
       type: "std_msgs/Float64MultiArray"
-      description: "Target joint positions (4 floats in radians)"
+      description: "Target joint positions (6 floats in radians)"
 
   heartbeat:
     - name: "Chatter"
@@ -152,20 +153,24 @@ interfaces:
       child: "link3"
     - parent: "link3"
       child: "link4"
+    - parent: "link4"
+      child: "link5"
+    - parent: "link5"
+      child: "link6"
 
 # ─── Sim / Hardware Profiles ───
 # Each profile defines a launch configuration for a specific deployment target.
 # Studio shows a profile selector in the workspace UI.
 profiles:
   sim:
-    launch: "ros2 launch my_bot_bringup sim.launch.py"
-    params: "ros2_ws/src/my_bot_bringup/config/sim_params.yaml"
+    launch: "ros2 launch lite6_bringup sim.launch.py"
+    params: "ros2_ws/src/lite6_bringup/config/sim_params.yaml"
     hardware_required: false
     description: "Full MuJoCo simulation — no hardware needed"
 
   # hardware:
-  #   launch: "ros2 launch my_bot_bringup hardware.launch.py"
-  #   params: "ros2_ws/src/my_bot_bringup/config/hardware_params.yaml"
+  #   launch: "ros2 launch lite6_bringup hardware.launch.py"
+  #   params: "ros2_ws/src/lite6_bringup/config/hardware_params.yaml"
   #   hardware_required: true
   #   connection:
   #     method: "rosbridge"            # rosbridge | micro-ros | serial | ssh
@@ -177,22 +182,28 @@ profiles:
 # Studio displays these in the workspace and the agent uses them for validation.
 safety:
   joint_limits:
-    joint_base:
-      position: [-3.14, 3.14]         # rad (mechanical: ±180°)
-      velocity: 2.0                    # rad/s max
-    joint_shoulder:
-      position: [-1.57, 1.57]         # rad (mechanical: ±90°)
-      velocity: 1.5
-    joint_elbow:
-      position: [-2.36, 0.0]          # rad (mechanical: -135° to 0°)
-      velocity: 1.5
-    joint_wrist:
-      position: [-1.57, 1.57]         # rad (mechanical: ±90°)
-      velocity: 2.0
+    joint1:
+      position: [-6.283, 6.283]       # rad (±360°)
+      velocity: 3.14                   # rad/s max
+    joint2:
+      position: [-2.618, 2.618]       # rad (±150°)
+      velocity: 3.14
+    joint3:
+      position: [-0.061, 5.236]       # rad (-3.5° to 300°)
+      velocity: 3.14
+    joint4:
+      position: [-6.283, 6.283]       # rad (±360°)
+      velocity: 3.14
+    joint5:
+      position: [-2.164, 2.164]       # rad (±124°)
+      velocity: 3.14
+    joint6:
+      position: [-6.283, 6.283]       # rad (±360°)
+      velocity: 3.14
   workspace_bounds:                    # Cartesian workspace envelope (meters)
     x: [-0.6, 0.6]
     y: [-0.6, 0.6]
-    z: [0.0, 0.9]
+    z: [0.0, 0.7]
   emergency_stop_topic: "/e_stop"
   # max_force_n: 50                   # Max end-effector force (optional)
   # collision_check: true             # Enable self-collision checking (optional)
@@ -229,7 +240,7 @@ on_start:
     command: >
       source /opt/ros/jazzy/setup.bash &&
       source /workspace/ros2_ws/install/setup.bash &&
-      ros2 launch my_bot_bringup sim.launch.py
+      ros2 launch lite6_bringup sim.launch.py
     terminal: "ros"
     wait_for: "Build"
 
@@ -237,14 +248,14 @@ on_start:
 runbook:
   - step: "Build the workspace"
     detail: "colcon build --symlink-install in ros2_ws/"
-    verify: "Exit code 0, no errors"
+    verify: "Exit code 0, 3 packages built"
   - step: "Launch the sim profile"
-    detail: "ros2 launch my_bot_bringup sim.launch.py"
-    verify: "/joint_states publishing, MuJoCo tab loads arm model"
+    detail: "ros2 launch lite6_bringup sim.launch.py"
+    verify: "/joint_states publishing at 50 Hz, MuJoCo viewer loads Lite 6"
   - step: "Send position commands"
     detail: >
       ros2 topic pub /position_controller/commands
-      std_msgs/msg/Float64MultiArray '{data: [0.5, 0.3, -0.8, 0.2]}'
+      std_msgs/msg/Float64MultiArray '{data: [0.5, 0.3, 1.2, 0.0, 1.0, 0.0]}'
     verify: "Arm moves to target position in sim"
   - step: "Record a bag"
     detail: "Use Studio Record button or: ros2 bag record /joint_states /tf -o test_bag --storage mcap"

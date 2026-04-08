@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y \
 
 # Python packages
 RUN pip3 install --break-system-packages \
-    mujoco>=3.0 \
-    numpy
+    mujoco>=3.1.0 \
+    numpy>=1.26
 
 # Auto-source ROS on every shell (matches Studio .bashrc)
 RUN echo "source /opt/ros/jazzy/setup.bash" >> /root/.bashrc && \

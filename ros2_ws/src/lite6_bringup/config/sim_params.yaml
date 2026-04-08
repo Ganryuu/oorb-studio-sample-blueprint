@@ -1,0 +1,12 @@
+mujoco_sim_node:
+  ros__parameters:
+    publish_rate: 50.0
+    joint_names:
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+      - joint5
+      - joint6
+    kp: [2000, 2000, 1500, 1500, 1500, 800]
+    kv: [200, 200, 150, 150, 150, 80]

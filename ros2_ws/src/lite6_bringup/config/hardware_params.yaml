@@ -1,0 +1,14 @@
+# Hardware profile — template for physical UFactory Lite 6
+# Configure these when connecting to a real robot via xArm SDK or ROS driver
+lite6_hardware_driver:
+  ros__parameters:
+    ip_address: "192.168.1.xxx"
+    report_type: "normal"
+    joint_names:
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+      - joint5
+      - joint6
+    max_velocity: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
