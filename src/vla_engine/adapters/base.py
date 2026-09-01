@@ -12,7 +12,8 @@ from __future__ import annotations
 import abc
 import logging
 import time
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 
@@ -46,6 +47,7 @@ class VLAAdapter(abc.ABC):
         self._loaded = False
         self._load_seconds = 0.0
         self._warmup_seconds = 0.0
+        self._warmup_steps = 0
         self._predict_count = 0
 
     # -- lifecycle -----------------------------------------------------------
@@ -62,7 +64,7 @@ class VLAAdapter(abc.ABC):
     def is_loaded(self) -> bool:
         return self._loaded
 
-    def load(self) -> "VLAAdapter":
+    def load(self) -> VLAAdapter:
         """Load weights, apply optimizations, and warm up. Idempotent."""
         if self._loaded:
             return self
@@ -81,7 +83,7 @@ class VLAAdapter(abc.ABC):
         self._loaded = True
         self._load_seconds = time.perf_counter() - started
         logger.info("loaded %s in %.1fs", self.spec.name, self._load_seconds)
-        self._warmup_seconds = self.warmup()
+        self._warmup_steps, self._warmup_seconds = self.warmup()
         return self
 
     def unload(self) -> None:
@@ -110,7 +112,7 @@ class VLAAdapter(abc.ABC):
         except Exception:
             pass
 
-    def warmup(self, steps: int | None = None) -> float:
+    def warmup(self, steps: int | None = None) -> tuple[int, float]:
         """Run synthetic observations to trigger compilation and graph capture.
 
         Uses a blank image and a neutral state, which exercises exactly the
@@ -119,7 +121,7 @@ class VLAAdapter(abc.ABC):
         """
         count = self.config.compile.warmup_steps if steps is None else steps
         if count <= 0 or not self._loaded:
-            return 0.0
+            return 0, 0.0
         from ..runtime.compile import warmup as _warmup
 
         dummy = self.dummy_observation()
@@ -128,9 +130,7 @@ class VLAAdapter(abc.ABC):
     def dummy_observation(self) -> Observation:
         """A synthetic observation matching this policy's input contract."""
         height, width = self.spec.image_size
-        images = {
-            cam: np.zeros((height, width, 3), dtype=np.uint8) for cam in self.spec.cameras
-        }
+        images = {cam: np.zeros((height, width, 3), dtype=np.uint8) for cam in self.spec.cameras}
         state = (
             np.zeros(self.spec.state_dim or 7, dtype=np.float32)
             if self.spec.requires_state
@@ -151,9 +151,7 @@ class VLAAdapter(abc.ABC):
         at batch 1 this is the direct path with no extra copies.
         """
         if not self._loaded:
-            raise NotLoadedError(
-                f"{self.spec.name} weights are not loaded; call .load() first"
-            )
+            raise NotLoadedError(f"{self.spec.name} weights are not loaded; call .load() first")
         if not observations:
             return []
         for obs in observations:
@@ -219,5 +217,6 @@ class VLAAdapter(abc.ABC):
             "requires_state": self.spec.requires_state,
             "load_seconds": round(self._load_seconds, 2),
             "warmup_seconds": round(self._warmup_seconds, 2),
+            "warmup_steps": self._warmup_steps,
             "predictions": self._predict_count,
         }

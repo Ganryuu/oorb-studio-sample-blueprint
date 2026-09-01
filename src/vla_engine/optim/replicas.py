@@ -21,9 +21,9 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from typing import Callable, Iterator, Sequence
 
 from ..errors import BackendError
 from ..types import ActionChunk, Observation
@@ -52,7 +52,7 @@ class ReplicaPool:
         self._factory = factory
         self.devices = list(devices)
         self._replicas: list = []
-        self._idle: "queue.LifoQueue" = queue.LifoQueue()
+        self._idle: queue.LifoQueue = queue.LifoQueue()
         self._loaded = False
         self._lock = threading.Lock()
         self._pool: ThreadPoolExecutor | None = None
@@ -60,7 +60,7 @@ class ReplicaPool:
 
     # -- lifecycle -----------------------------------------------------------
 
-    def load(self) -> "ReplicaPool":
+    def load(self) -> ReplicaPool:
         """Build and load one replica per device.
 
         Loading is sequential on purpose: two 7B checkpoints materializing at
@@ -122,8 +122,7 @@ class ReplicaPool:
             replica = self._idle.get(timeout=timeout)
         except queue.Empty as exc:
             raise BackendError(
-                f"no replica became available within {timeout}s "
-                f"({self.size} replicas, all busy)"
+                f"no replica became available within {timeout}s ({self.size} replicas, all busy)"
             ) from exc
         device = getattr(replica, "device", "?")
         self._dispatch_counts[device] = self._dispatch_counts.get(device, 0) + 1

@@ -17,8 +17,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable, Sequence
 
 from ..config import BatchConfig
 from ..errors import BackendError
@@ -60,7 +60,7 @@ class BatcherStats:
 @dataclass
 class _Request:
     observation: Observation
-    future: "asyncio.Future[ActionChunk]"
+    future: asyncio.Future[ActionChunk]
     enqueued_at: float
 
 
@@ -86,7 +86,7 @@ class ContinuousBatcher:
     ) -> None:
         self._predict_batch = predict_batch
         self.config = config or BatchConfig()
-        self._queue: "asyncio.Queue[_Request]" = asyncio.Queue()
+        self._queue: asyncio.Queue[_Request] = asyncio.Queue()
         self._task: asyncio.Task | None = None
         self._running = False
         self.stats = BatcherStats()
@@ -191,7 +191,8 @@ class ContinuousBatcher:
                     request.future.set_exception(error)
             return
 
-        for request, chunk in zip(batch, chunks):
+        # Lengths were verified equal above; strict=True guards that check.
+        for request, chunk in zip(batch, chunks, strict=True):
             if chunk.stats is not None:
                 chunk.stats.queue_ms = (now - request.enqueued_at) * 1000.0
             if not request.future.done():

@@ -62,7 +62,6 @@ def create_app(config: EngineConfig, *, engine: VLAEngine | None = None):
     """
     _require_fastapi()
     from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-    from fastapi.responses import JSONResponse
 
     from ..optim.batching import ContinuousBatcher
 

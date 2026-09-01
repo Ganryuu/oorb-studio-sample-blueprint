@@ -15,7 +15,8 @@ Example:
 from __future__ import annotations
 
 import logging
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from .config import EngineConfig
 from .control.chunker import ChunkExecutor, ChunkPolicy
@@ -53,7 +54,7 @@ class VLAEngine:
     # -- construction --------------------------------------------------------
 
     @classmethod
-    def from_pretrained(cls, model: str, **kwargs: Any) -> "VLAEngine":
+    def from_pretrained(cls, model: str, **kwargs: Any) -> VLAEngine:
         """Build and load an engine in one call.
 
         Keyword arguments are forwarded to :class:`EngineConfig`, so
@@ -86,7 +87,7 @@ class VLAEngine:
             return [self.config.device]
         return [topology.replica_devices()[0]]
 
-    def load(self) -> "VLAEngine":
+    def load(self) -> VLAEngine:
         """Load weights. Uses a replica per device when several are configured."""
         if self._loaded:
             return self
@@ -151,7 +152,7 @@ class VLAEngine:
         self._adapter = None
         self._loaded = False
 
-    def __enter__(self) -> "VLAEngine":
+    def __enter__(self) -> VLAEngine:
         return self.load()
 
     def __exit__(self, *exc: Any) -> None:
@@ -187,7 +188,9 @@ class VLAEngine:
 
     # -- control helpers -----------------------------------------------------
 
-    def make_executor(self, policy: ChunkPolicy | None = None, action_dim: int | None = None) -> ChunkExecutor:
+    def make_executor(
+        self, policy: ChunkPolicy | None = None, action_dim: int | None = None
+    ) -> ChunkExecutor:
         """Create a :class:`ChunkExecutor` matched to this policy.
 
         Defaults to blending overlapping chunks and treating the last dimension

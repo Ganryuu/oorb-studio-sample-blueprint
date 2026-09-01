@@ -20,8 +20,9 @@ corrupted by rescaling.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -72,7 +73,7 @@ class ActionStats:
         return int(ref.shape[0])  # type: ignore[union-attr]
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "ActionStats":
+    def from_dict(cls, data: Mapping[str, Any]) -> ActionStats:
         """Parse the statistics dict shipped inside a policy checkpoint.
 
         Accepts both the OpenVLA layout (``{"action": {"q01": [...]}}``) and a
@@ -91,7 +92,7 @@ class ActionStats:
         )
 
     @classmethod
-    def identity(cls, action_dim: int) -> "ActionStats":
+    def identity(cls, action_dim: int) -> ActionStats:
         """Statistics that leave actions untouched (already in robot units)."""
         return cls(
             mean=np.zeros(action_dim, np.float32),

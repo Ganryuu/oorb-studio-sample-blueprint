@@ -12,8 +12,8 @@ this module never pulls in torch.
 from __future__ import annotations
 
 import importlib
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Iterator
 
 from .errors import ModelNotFoundError
 from .types import PolicySpec
@@ -62,7 +62,9 @@ class ModelCard:
             bytes_per_param = 1.05
         return self.params_b * bytes_per_param * 1.15
 
-    def fits_on(self, memory_gb: float, dtype: str = "bf16", quantization: str | None = None) -> bool:
+    def fits_on(
+        self, memory_gb: float, dtype: str = "bf16", quantization: str | None = None
+    ) -> bool:
         return self.memory_gb(dtype, quantization) <= memory_gb
 
     def load_adapter_class(self) -> type:
@@ -163,10 +165,11 @@ register(
             "Prismatic VLM: Llama-2-7B decoder over a fused DINOv2+SigLIP vision "
             "tower. Actions are emitted as 7 discrete tokens drawn from the 256 "
             "least-used entries of the Llama vocabulary, then un-normalized with "
-            "per-dataset q01/q99 statistics selected by `unnorm_key`. Fits a 24 GB "
-            "3090 at bf16 (~15 GB); nf4 drops it to ~5 GB. Single-step output means "
-            "the control loop leans on the chunk executor to hold between "
-            "predictions."
+            "per-dataset q01/q99 statistics selected by `unnorm_key`. At bf16 the "
+            "weights are ~15 GB, ~17.5 GB once activations and the KV cache are "
+            "counted, so it fits a 24 GB 3090 with room to spare; nf4 brings that "
+            "to ~4.8 GB. Single-step output means the control loop leans on the "
+            "chunk executor to hold between predictions."
         ),
     )
 )
@@ -196,7 +199,7 @@ register(
             "Predicts a 50-step chunk by integrating an ODE over N denoising "
             "steps, so latency scales with `num_denoise_steps` (10 by default) -- "
             "that knob is the main latency/quality dial, more so than precision. "
-            "Comfortable on one 3090 at bf16 (~7 GB)."
+            "Comfortable on one 3090 at bf16 (~7.6 GB all-in)."
         ),
     )
 )

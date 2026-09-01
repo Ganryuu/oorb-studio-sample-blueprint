@@ -9,8 +9,9 @@ ROS 2 node or a benchmark harness import them without CUDA on the machine.
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -30,9 +31,7 @@ def _as_uint8_rgb(name: str, image: Any) -> np.ndarray:
     if arr.ndim == 2:  # grayscale -> RGB
         arr = np.repeat(arr[:, :, None], 3, axis=2)
     if arr.ndim != 3:
-        raise ObservationError(
-            f"image {name!r} must be HxW or HxWxC, got shape {arr.shape}"
-        )
+        raise ObservationError(f"image {name!r} must be HxW or HxWxC, got shape {arr.shape}")
     if arr.shape[0] in (1, 3, 4) and arr.shape[2] not in (1, 3, 4):
         # Looks like CHW (a torch-style layout leaked in) -> transpose to HWC.
         arr = np.transpose(arr, (1, 2, 0))
@@ -42,9 +41,7 @@ def _as_uint8_rgb(name: str, image: Any) -> np.ndarray:
     elif channels == 1:
         arr = np.repeat(arr, 3, axis=2)
     elif channels != 3:
-        raise ObservationError(
-            f"image {name!r} must have 1, 3, or 4 channels, got {channels}"
-        )
+        raise ObservationError(f"image {name!r} must have 1, 3, or 4 channels, got {channels}")
     if arr.dtype != np.uint8:
         # Float images are assumed to be in [0, 1]; anything else in [0, 255].
         if np.issubdtype(arr.dtype, np.floating):
@@ -101,7 +98,7 @@ class Observation:
         *,
         camera: str = "primary",
         timestamp: float | None = None,
-    ) -> "Observation":
+    ) -> Observation:
         """Convenience constructor for the common single-camera case."""
         return cls(
             images={camera: image},
@@ -133,7 +130,7 @@ class ActionChunk:
 
     actions: np.ndarray
     timestamp: float = field(default_factory=time.monotonic)
-    stats: "InferenceStats | None" = None
+    stats: InferenceStats | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -141,9 +138,7 @@ class ActionChunk:
         if arr.ndim == 1:
             arr = arr[None, :]
         if arr.ndim != 2:
-            raise ObservationError(
-                f"actions must be [horizon, action_dim], got shape {arr.shape}"
-            )
+            raise ObservationError(f"actions must be [horizon, action_dim], got shape {arr.shape}")
         self.actions = np.ascontiguousarray(arr)
 
     @property
@@ -160,7 +155,7 @@ class ActionChunk:
     def __getitem__(self, index: int) -> np.ndarray:
         return self.actions[index]
 
-    def truncate(self, steps: int) -> "ActionChunk":
+    def truncate(self, steps: int) -> ActionChunk:
         """Return a copy keeping only the first ``steps`` actions."""
         if steps <= 0:
             raise ValueError("steps must be positive")
@@ -237,7 +232,9 @@ class PolicySpec:
                 resolved[cam] = leftover.pop(cam)
         missing = [c for c in self.cameras if c not in resolved]
         spare = list(leftover.values())
-        for cam, frame in zip(missing, spare):
+        # Deliberately ragged: there may be fewer spare frames than missing
+        # camera slots, and the shortfall is handled just below.
+        for cam, frame in zip(missing, spare, strict=False):
             resolved[cam] = frame
         still_missing = [c for c in self.cameras if c not in resolved]
         if still_missing:
@@ -246,8 +243,7 @@ class PolicySpec:
             primary = resolved.get(self.cameras[0])
             if primary is None:
                 raise ObservationError(
-                    f"policy {self.name!r} expects cameras {list(self.cameras)}, "
-                    f"got {list(images)}"
+                    f"policy {self.name!r} expects cameras {list(self.cameras)}, got {list(images)}"
                 )
             for cam in still_missing:
                 resolved[cam] = primary

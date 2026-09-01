@@ -91,11 +91,14 @@ class OpenVLAAdapter(VLAAdapter):
 
     def _load(self) -> None:
         try:
-            import torch
+            # torch is imported explicitly, not just transitively: transformers
+            # installs fine without it, and the resulting failure deep inside
+            # from_pretrained is far less clear than this one.
+            import torch  # noqa: F401
             from transformers import AutoModelForVision2Seq, AutoProcessor
         except ImportError as exc:
             raise DependencyError(
-                "transformers", "OpenVLA", extra="vla-engine[cuda]"
+                exc.name or "transformers", "OpenVLA", extra="vla-engine[cuda]"
             ) from exc
 
         self.processor = AutoProcessor.from_pretrained(
@@ -139,9 +142,7 @@ class OpenVLAAdapter(VLAAdapter):
                 max_batch_size=self.config.batch.max_batch_size,
             )
 
-        result = maybe_compile(
-            model, self.config.compile, device=self.device, label="openvla"
-        )
+        result = maybe_compile(model, self.config.compile, device=self.device, label="openvla")
         if result.compiled:
             self.model = result.module
             if self._decoder is not None:
@@ -179,8 +180,7 @@ class OpenVLAAdapter(VLAAdapter):
                 )
         elif key not in norm_stats:
             raise ConfigError(
-                f"unnorm_key {key!r} not in checkpoint {self.checkpoint}. "
-                f"Available: {available}"
+                f"unnorm_key {key!r} not in checkpoint {self.checkpoint}. Available: {available}"
             )
 
         self.unnorm_key = key
@@ -197,7 +197,6 @@ class OpenVLAAdapter(VLAAdapter):
     # -- inference -----------------------------------------------------------
 
     def _predict_batch(self, observations: list[Observation]) -> np.ndarray:
-        import torch
 
         inputs = self._prepare_inputs(observations)
         if self._decoder is not None:

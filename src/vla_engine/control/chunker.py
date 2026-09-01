@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from dataclasses import dataclass, field
-from typing import Deque, Iterable, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -112,7 +112,7 @@ class ChunkExecutor:
     ) -> None:
         self.action_dim = int(action_dim)
         self.policy = policy or ChunkPolicy()
-        self._chunks: Deque[_PendingChunk] = deque(maxlen=max_pending)
+        self._chunks: deque[_PendingChunk] = deque(maxlen=max_pending)
         self._step = 0
         self._last_action: np.ndarray | None = None
         self._starved_steps = 0

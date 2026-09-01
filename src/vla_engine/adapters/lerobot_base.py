@@ -77,7 +77,6 @@ class LeRobotFlowAdapter(VLAAdapter):
         return getattr(module, class_name)
 
     def _load(self) -> None:
-        import torch
 
         policy_cls = self._import_policy_class()
         policy = policy_cls.from_pretrained(self.checkpoint)
@@ -121,8 +120,7 @@ class LeRobotFlowAdapter(VLAAdapter):
             logger.info("set denoising steps=%d on %s", self.num_denoise_steps, applied)
         else:
             logger.warning(
-                "could not find a denoising-step attribute on %s; using the "
-                "checkpoint default",
+                "could not find a denoising-step attribute on %s; using the checkpoint default",
                 type(policy).__name__,
             )
 

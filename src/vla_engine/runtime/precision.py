@@ -141,8 +141,10 @@ def plan_precision(
             notes.append("no CUDA device: using fp32")
         elif device.supports_bf16:
             dtype = "bf16"
-            notes.append(f"{device.arch} (sm_{device.capability[0]}{device.capability[1]}) "
-                         "supports bf16 tensor cores")
+            notes.append(
+                f"{device.arch} (sm_{device.capability[0]}{device.capability[1]}) "
+                "supports bf16 tensor cores"
+            )
         else:
             dtype = "fp16"
             notes.append(f"{device.arch} predates bf16 tensor cores: using fp16")

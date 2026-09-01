@@ -75,10 +75,7 @@ class DeviceInfo:
         if self.kind == "cpu":
             return "cpu"
         sm = f"sm_{self.capability[0]}{self.capability[1]}"
-        return (
-            f"cuda:{self.index} {self.name} ({self.arch}, {sm}, "
-            f"{self.total_memory_gb:.0f} GB)"
-        )
+        return f"cuda:{self.index} {self.name} ({self.arch}, {sm}, {self.total_memory_gb:.0f} GB)"
 
 
 @dataclass
@@ -127,8 +124,7 @@ class GpuTopology:
             unknown = [d for d in requested if d not in known and d != "cpu"]
             if unknown:
                 raise ConfigError(
-                    f"requested devices {unknown} are not visible; "
-                    f"available: {sorted(known)}"
+                    f"requested devices {unknown} are not visible; available: {sorted(known)}"
                 )
             return list(requested)
         gpus = self.cuda_devices

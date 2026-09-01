@@ -11,7 +11,7 @@ on the GPU, where they are effectively free next to the model forward.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 

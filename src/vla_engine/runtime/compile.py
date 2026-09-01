@@ -18,8 +18,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from ..config import CompileConfig
 
@@ -65,7 +66,9 @@ def maybe_compile(
         return CompileResult(module, False, reason="torch not installed")
 
     if not hasattr(torch, "compile"):
-        return CompileResult(module, False, reason=f"torch {torch.__version__} has no torch.compile")
+        return CompileResult(
+            module, False, reason=f"torch {torch.__version__} has no torch.compile"
+        )
 
     if not device.startswith("cuda"):
         # Inductor supports CPU, but reduce-overhead/CUDA graphs do not, and
@@ -96,7 +99,7 @@ def warmup(
     *,
     label: str = "model",
     synchronize: bool = True,
-) -> float:
+) -> tuple[int, float]:
     """Run ``fn`` ``steps`` times to trigger compilation and CUDA-graph capture.
 
     Torch compiles lazily on first call and re-compiles on shape changes, and
@@ -105,14 +108,18 @@ def warmup(
     step from taking 60 seconds.
 
     Returns:
-        Seconds spent warming up.
+        ``(completed_steps, seconds)``. A completed count below ``steps`` means
+        warmup aborted early, so compilation may not have been triggered and
+        the first real inference will pay for it.
     """
     if steps <= 0:
-        return 0.0
+        return 0, 0.0
     started = time.perf_counter()
+    completed = 0
     for i in range(steps):
         try:
             fn()
+            completed += 1
         except Exception as exc:  # pragma: no cover - model specific
             logger.warning("warmup step %d/%d for %s failed: %s", i + 1, steps, label, exc)
             break
@@ -125,8 +132,8 @@ def warmup(
         except Exception:
             pass
     elapsed = time.perf_counter() - started
-    logger.info("warmed up %s: %d steps in %.1fs", label, steps, elapsed)
-    return elapsed
+    logger.info("warmed up %s: %d/%d steps in %.1fs", label, completed, steps, elapsed)
+    return completed, elapsed
 
 
 def reset_compile_cache() -> None:

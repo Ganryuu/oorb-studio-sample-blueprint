@@ -22,7 +22,8 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import numpy as np
 
@@ -41,7 +42,9 @@ __all__ = [
 PROTOCOL_VERSION = 1
 
 
-def encode_image(image: np.ndarray, image_format: str = "jpeg", quality: int = 90) -> dict[str, Any]:
+def encode_image(
+    image: np.ndarray, image_format: str = "jpeg", quality: int = 90
+) -> dict[str, Any]:
     """Encode one ``HxWx3`` uint8 frame for transport."""
     if image_format == "raw":
         return {
@@ -139,11 +142,7 @@ def decode_chunk(payload: Mapping[str, Any]) -> ActionChunk:
     stats_payload = payload.get("stats")
     stats = None
     if stats_payload:
-        known = {
-            k: v
-            for k, v in stats_payload.items()
-            if k in InferenceStats.__dataclass_fields__
-        }
+        known = {k: v for k, v in stats_payload.items() if k in InferenceStats.__dataclass_fields__}
         stats = InferenceStats(**known)
     return ActionChunk(
         actions=np.asarray(payload["actions"], dtype=np.float32),

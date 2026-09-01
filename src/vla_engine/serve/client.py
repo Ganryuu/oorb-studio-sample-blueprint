@@ -20,8 +20,6 @@ from typing import Any
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
-import numpy as np
-
 from ..errors import BackendError, DependencyError
 from ..types import ActionChunk, Observation
 from .protocol import decode_chunk, encode_observation
@@ -88,7 +86,7 @@ class VLAClient:
         except urlerror.URLError as exc:
             raise BackendError(f"cannot reach {self.url}: {exc.reason}") from exc
 
-    def connect(self) -> "VLAClient":
+    def connect(self) -> VLAClient:
         """Open the websocket. Called lazily by :meth:`predict` if needed."""
         if not self.use_websocket or self._ws is not None:
             return self
@@ -98,8 +96,22 @@ class VLAClient:
             raise DependencyError(
                 "websockets", "the websocket client", extra="vla-engine[client]"
             ) from exc
-        self._ws = connect(f"{self.url}/stream", open_timeout=self.timeout)
-        logger.info("connected to %s/stream", self.url)
+        url = f"{self.url}/stream"
+        # A control loop holds one connection open across many predictions, so
+        # we need the ClientConnection itself rather than a context manager.
+        # websockets >= 15 spells that `legacy=True`; older versions return it
+        # directly and reject the argument.
+        kwargs = {
+            "open_timeout": self.timeout,
+            # Raw-encoded multi-camera observations exceed the 1 MiB default
+            # (a 512x512 frame is ~1.05 MB once base64-encoded).
+            "max_size": 32 * 1024 * 1024,
+        }
+        try:
+            self._ws = connect(url, legacy=True, **kwargs)
+        except TypeError:
+            self._ws = connect(url, **kwargs)
+        logger.info("connected to %s", url)
         return self
 
     def close(self) -> None:
@@ -109,7 +121,7 @@ class VLAClient:
             finally:
                 self._ws = None
 
-    def __enter__(self) -> "VLAClient":
+    def __enter__(self) -> VLAClient:
         return self.connect()
 
     def __exit__(self, *exc: Any) -> None:

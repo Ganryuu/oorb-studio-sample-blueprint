@@ -18,8 +18,9 @@ Defaults here are tuned for the reference deployment target: 2x RTX 3090
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field, fields
-from typing import Any, Mapping
+from typing import Any
 
 from .errors import ConfigError
 
@@ -78,8 +79,7 @@ class PrecisionConfig:
             self.quantization = None
         if self.quantization not in _QUANT:
             raise ConfigError(
-                f"quantization must be one of {[q for q in _QUANT if q]}, "
-                f"got {self.quantization!r}"
+                f"quantization must be one of {[q for q in _QUANT if q]}, got {self.quantization!r}"
             )
         if self.attention not in _ATTENTION:
             raise ConfigError(f"attention must be one of {_ATTENTION}, got {self.attention!r}")
@@ -232,14 +232,14 @@ class EngineConfig:
                 raise ConfigError(f"devices entries must be non-empty strings, got {bad}")
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "EngineConfig":
+    def from_dict(cls, data: Mapping[str, Any]) -> EngineConfig:
         return _coerce(cls, data)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_env(cls, model: str | None = None, prefix: str = "VLA_") -> "EngineConfig":
+    def from_env(cls, model: str | None = None, prefix: str = "VLA_") -> EngineConfig:
         """Build a config from ``VLA_*`` environment variables.
 
         Recognized: ``VLA_MODEL``, ``VLA_CHECKPOINT``, ``VLA_DEVICE``,
