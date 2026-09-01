@@ -103,6 +103,11 @@ class ReplicaPool:
         return len(self._replicas)
 
     @property
+    def replicas(self) -> list:
+        """The loaded replicas, in device order."""
+        return list(self._replicas)
+
+    @property
     def is_loaded(self) -> bool:
         return self._loaded
 

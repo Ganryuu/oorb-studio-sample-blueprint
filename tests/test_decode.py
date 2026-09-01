@@ -72,6 +72,14 @@ class TestActionDetokenization:
     def test_out_of_range_ids_clamp_rather_than_index_error(self):
         assert np.isfinite(decode_action_tokens(np.array([[0, VOCAB + 500]]), VOCAB)).all()
 
+    def test_refuses_already_decoded_actions(self):
+        """Regression: feeding decoded floats back through detokenization used to
+        collapse every action into one bin, silently and catastrophically."""
+        from vla_engine.errors import ObservationError
+
+        with pytest.raises(ObservationError, match="integer token ids"):
+            decode_action_tokens(np.array([[0.5, -0.3]], np.float32), VOCAB)
+
     def test_prompt_format_is_exact(self):
         """OpenVLA was trained on this exact string; drift degrades actions silently."""
         assert (

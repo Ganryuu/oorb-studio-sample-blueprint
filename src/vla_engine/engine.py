@@ -106,7 +106,9 @@ class VLAEngine:
                 return adapter_cls(config)
 
             self._pool = ReplicaPool(factory, devices).load()
-            self._adapter = self._pool._replicas[0]
+            # Any replica answers introspection identically; keep the first for
+            # spec and info queries.
+            self._adapter = self._pool.replicas[0]
         else:
             config = EngineConfig.from_dict(
                 {**self.config.to_dict(), "device": devices[0], "devices": []}

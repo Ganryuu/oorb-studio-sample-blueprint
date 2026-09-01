@@ -30,7 +30,7 @@ import numpy as np
 
 from ..config import EngineConfig
 from ..control.normalize import ActionStats, Normalizer
-from ..errors import ConfigError, DependencyError
+from ..errors import ConfigError, DependencyError, ObservationError
 from ..registry import resolve
 from ..runtime.compile import maybe_compile
 from ..runtime.decode import GreedyActionDecoder
@@ -65,9 +65,18 @@ def decode_action_tokens(
     Returns:
         Float array of the same shape, in normalized action space.
     """
+    raw = np.asarray(token_ids)
+    if not np.issubdtype(raw.dtype, np.integer):
+        # Floats here mean already-decoded actions were passed by mistake.
+        # Casting would silently map every value into one bin and produce a
+        # constant action, so refuse instead.
+        raise ObservationError(
+            f"decode_action_tokens expects integer token ids, got dtype {raw.dtype}; "
+            "actions that are already decoded must not be detokenized again"
+        )
     bins = np.linspace(-1.0, 1.0, n_bins)
     bin_centers = (bins[:-1] + bins[1:]) / 2.0
-    indices = vocab_size - np.asarray(token_ids, dtype=np.int64)
+    indices = vocab_size - raw.astype(np.int64)
     indices = np.clip(indices - 1, 0, bin_centers.shape[0] - 1)
     return bin_centers[indices].astype(np.float32)
 
@@ -197,18 +206,27 @@ class OpenVLAAdapter(VLAAdapter):
     # -- inference -----------------------------------------------------------
 
     def _predict_batch(self, observations: list[Observation]) -> np.ndarray:
-
         inputs = self._prepare_inputs(observations)
-        if self._decoder is not None:
-            token_ids = self._decoder.decode(
+
+        if self._decoder is None:
+            # Reference path: the checkpoint's own predict_action already
+            # returns robot units, so it bypasses detokenization entirely.
+            reference = self._reference_predict(inputs)
+            if reference is not None:
+                return reference[:, None, :]
+
+        tokens = (
+            self._decoder.decode(
                 input_ids=inputs["input_ids"],
                 attention_mask=inputs.get("attention_mask"),
                 pixel_values=inputs["pixel_values"],
             )
-            tokens = token_ids.detach().cpu().numpy()
-        else:
-            tokens = self._fallback_generate(inputs)
-
+            .detach()
+            .cpu()
+            .numpy()
+            if self._decoder is not None
+            else self._generate_tokens(inputs)
+        )
         normalized = decode_action_tokens(tokens, self._vocab_size)
         actions = self._normalizer.unnormalize(normalized)  # type: ignore[union-attr]
         return actions[:, None, :]  # [B, 1, action_dim]: OpenVLA is single-step
@@ -236,22 +254,31 @@ class OpenVLAAdapter(VLAAdapter):
                 prepared[key] = value.to(self.device, non_blocking=True)
         return prepared
 
-    def _fallback_generate(self, inputs: dict) -> np.ndarray:
-        """Path used when the static-cache decoder is disabled.
+    def _reference_predict(self, inputs: dict) -> np.ndarray | None:
+        """Run the checkpoint's own ``predict_action``, if it has one.
 
-        Prefers the checkpoint's own ``predict_action`` so behavior matches the
-        upstream reference implementation exactly.
+        This is the upstream reference implementation, kept as an escape hatch
+        for validating the optimized path against known-good behavior.
+
+        Returns ``[B, action_dim]`` **already in robot units** -- predict_action
+        applies its own un-normalization -- or ``None`` if the checkpoint does
+        not expose it. Callers must not detokenize or un-normalize this result
+        again.
         """
         import torch
 
+        predict_action = getattr(self.model, "predict_action", None)
+        if not callable(predict_action) or not self.unnorm_key:
+            return None
         with torch.inference_mode():
-            predict_action = getattr(self.model, "predict_action", None)
-            if callable(predict_action) and self.unnorm_key:
-                actions = predict_action(**inputs, unnorm_key=self.unnorm_key, do_sample=False)
-                arr = np.atleast_2d(np.asarray(actions, dtype=np.float32))
-                # Already in robot units; invert so the shared un-normalize
-                # below is a no-op round trip rather than a second application.
-                return self._normalizer.normalize(arr)  # type: ignore[union-attr]
+            actions = predict_action(**inputs, unnorm_key=self.unnorm_key, do_sample=False)
+        return np.atleast_2d(np.asarray(actions, dtype=np.float32))
+
+    def _generate_tokens(self, inputs: dict) -> np.ndarray:
+        """Emit action tokens with ``generate()``. Returns ``[B, action_dim]`` ids."""
+        import torch
+
+        with torch.inference_mode():
             generated = self.model.generate(
                 **inputs,
                 max_new_tokens=self.spec.action_dim,
