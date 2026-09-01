@@ -178,13 +178,17 @@ class LeRobotFlowAdapter(VLAAdapter):
         target_size = self.spec.image_size
         dtype = self.precision.torch_dtype()
 
+        # Resolve each observation's cameras once, not once per camera slot.
+        resolved_per_obs = [self.spec.resolve_cameras(obs.images) for obs in observations]
+
         for slot, key in enumerate(self._camera_keys):
             cam_name = self.spec.cameras[min(slot, len(self.spec.cameras) - 1)]
-            frames = []
-            for obs in observations:
-                resolved = self.spec.resolve_cameras(obs.images)
-                frame = resolved.get(cam_name, resolved[self.spec.cameras[0]])
-                frames.append(resize_with_padding(frame, target_size))
+            frames = [
+                resize_with_padding(
+                    resolved.get(cam_name, resolved[self.spec.cameras[0]]), target_size
+                )
+                for resolved in resolved_per_obs
+            ]
             batch[key] = to_device_chw_float(stack_uint8(frames), self.device, dtype=dtype)
 
         states = [self._pad_state(obs) for obs in observations]

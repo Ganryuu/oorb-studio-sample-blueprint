@@ -58,7 +58,11 @@ def to_device_chw_float(batch_hwc_uint8: np.ndarray, device: str, dtype=None):
         except RuntimeError:
             pass  # pinning can fail under memory pressure; the copy still works
     gpu = host.to(device, non_blocking=True)
-    return gpu.permute(0, 3, 1, 2).to(dtype).div_(255.0)
+    # Scale in fp32 before casting: bf16 carries 8 mantissa bits, too few to
+    # represent 256 distinct intensity levels, so dividing directly in bf16
+    # would quantize the image before the model ever sees it.
+    scaled = gpu.permute(0, 3, 1, 2).to(torch.float32).div_(255.0)
+    return scaled.to(dtype) if dtype != torch.float32 else scaled
 
 
 def resize_with_padding(image: np.ndarray, target: tuple[int, int]) -> np.ndarray:

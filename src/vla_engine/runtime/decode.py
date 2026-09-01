@@ -132,7 +132,11 @@ class GreedyActionDecoder:
         """
         if not self.use_static_cache:
             return None
-        if self._cache is not None and self._cache_batch_size >= batch_size:
+        # Exact match required: a StaticCache is allocated as
+        # [max_batch_size, heads, max_cache_len, head_dim], so feeding a
+        # batch-2 input to a batch-4 cache is a shape mismatch, not a
+        # harmless underfill.
+        if self._cache is not None and self._cache_batch_size == batch_size:
             self._reset_cache()
             return self._cache
         try:
