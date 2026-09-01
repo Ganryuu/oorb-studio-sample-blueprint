@@ -1,58 +1,52 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
 .Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+.eggs/
 .venv/
 venv/
-ENV/
 env/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.hypothesis/
 
-# PyCharm
-.idea/
+# Torch / HF
+*.pt
+*.pth
+*.safetensors
+*.bin
+.cache/
+hf_cache/
+checkpoints/
+outputs/
 
-# VS Code
-.vscode/
-*.code-workspace
+# torch.compile / triton caches
+.torchinductor_cache/
+.triton/
+
+# Benchmarks & profiles
+bench_results/
+*.json.gz
+*.nsys-rep
+*.qdrep
+*.sqlite
+trace_*.json
 
 # ROS 2
-install/
-log/
-build/
-*.ros2/
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
 
-# MuJoCo
-*.mjb
-*.msh
-
-# OS
+# Editors / OS
+.vscode/
+.idea/
 .DS_Store
-Thumbs.db
-*.swp
-*.swo
-*~
-
-# Models/Simulations large binaries (uncomment if needed)
-# *.xml
-# *.stl
-# *.obj
